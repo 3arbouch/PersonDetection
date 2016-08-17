@@ -1,0 +1,117 @@
+addpath(genpath('../toolbox/'));
+
+% Load both features and training images
+load train_feats;
+load train_imgs;
+
+
+
+%% -- Generate feature vectors (so each one is a row of X)
+fprintf('Generating feature vectors..\n');
+D = numel(feats{1});  % feature dimensionality
+X = zeros([length(imgs) D]);
+
+for i=1:length(imgs)
+    X(i,:) = feats{i}(:);  % convert to a vector of D dimensions
+end
+
+
+% [Tr.X,Tr.y,Te.X,Te.y]=splitFair(X,labels,0.8,1) ; 
+% Split the Data
+[Tr.X,Tr.y,Te.X,Te.y]=splitAndSubSample(X,labels,0.8,1,1) ; 
+%% Train an SVM Model: RBF KERNEL with DATA TRANFORMED with SVD
+
+fprintf('Training SVM Model.. RBF KERNEL SVD DATA\n');
+
+model1 = svmtrain(Tr.y, Tr.X , '-t 0 -c 1 ');
+[predicted_label, accuracy, decision_values1] = svmpredict(Te.y, Te.X, model1 );
+
+
+
+%% Train an SVM Model: RBF KERNEL with DATA TRANFORMED with PCA
+% Apply PCA on the DATA
+[U,mu,vars] = pca( X' ) ;
+% With this k, we capture 95 % of the main components of the Data 
+k = 1100 ; 
+[ Y, Xhat, avsq ] = pcaApply( X', U, mu, k ) ; 
+X = Y' ; 
+[Tr.X,Tr.y,Te.X,Te.y]=splitAndSubSample(X,labels,0.8,1,1) ; 
+fprintf('Training SVM Model.. RBF Kernel PCA Data\n');
+model2 = svmtrain(Tr.y, Tr.X , '-t 1 -c 1');
+[predicted_label, accuracy, decision_values2] = svmpredict(Te.y, Te.X, model2 );
+
+
+%% Train an SVM Model: RBF KERNEL with  SubSampling The Data
+
+fprintf('Training SVM Model.. RBF Kernel SubSampled  Data\n');
+
+model2 = svmtrain(Tr.y, Tr.X , '-t 1 -c 1');
+[predicted_label, accuracy, decision_values2] = svmpredict(Te.y, Te.X, model2 );
+
+
+%% Train an SVM Model: RBF KERNEL with  Fair Split of the  Data
+
+fprintf('Training SVM Model.. RBF Kernel Fair Data Split Data\n');
+
+model2 = svmtrain(Tr.y, Tr.X , '-t 1 -c 1');
+[predicted_label, accuracy, decision_values2] = svmpredict(Te.y, Te.X, model2 );
+
+
+
+
+%% Train an SVM Model: RBF KERNEL with   The Hole Data
+
+fprintf('Training SVM Model.. RBF Kernel ALL Data\n');
+
+model2 = svmtrain(Tr.y, Tr.X , '-t 1 -c 1');
+[predicted_label, accuracy, decision_values2] = svmpredict(Te.y, Te.X, model2 );
+
+
+
+
+%% See prediction performance
+fprintf('Plotting performance..\n');
+% let's also see how random predicition does
+randPred = rand(size(Te.y));
+
+% and plot all together, and get the performance of each
+methodNames = {'Linear Kernel', 'Polinomial Kernel'}; % this is to show it in the legend
+avgTPRList = evaluateMultipleMethods( Te.y > 0, [decision_values1,decision_values2], true, methodNames );
+
+% now you can see that the performance of each method
+% is in avgTPRList. You can see that random is doing very bad.
+avgTPRList
+
+
+
+
+% [U,S,V]=svd(X) ; 
+% X = U*S ; 
+% X=X(:,1:3000) ; 
+% [Tr.X,Tr.y,Te.X,Te.y]=splitAndSubSample(X,labels,0.8,8,1) ; 
+
+%%
+% % [U,S,V]=svd(X) ; 
+% % X = U*S ; 
+% % X=X(:,1:3000) ; 
+% rangeGamma = 0.0483;
+% % rangeGamma = [0.1 10] ; 
+% kernel =2 ; 
+% 
+% 
+% rangeC = 10 ;  
+% %  rangeC = 1;  
+% 
+% K = 5 ; 
+% 
+% 
+% 
+% [ scores, scoreBest, GammaBest, CBest ] = findBestHyperPArametersSVM( X, labels, rangeGamma, rangeC,kernel,  K  )
+
+
+
+
+
+
+
+

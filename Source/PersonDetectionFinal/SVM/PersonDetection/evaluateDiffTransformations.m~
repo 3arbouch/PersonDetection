@@ -1,0 +1,86 @@
+function [ decision_values ] = evaluateDiffTransformations( i, k)
+% this function is used to determine the decision values for each specified
+% kernel by the index i
+% Is used to plot ROC kurves over K folds
+if(i==1)
+  %% Train an SVM Model: RBF KERNEL with DATA TRANFORMED with SVD
+
+fprintf('Training SVM Model.. RBF KERNEL SVD DATA\n');
+
+
+
+XSVD = XSVD(:,1:3500) ; 
+
+% Generate Train and Test 
+                idxTe = idxCV(k,:); %% Get the kth line of indices
+                idxTr = idxCV([1:k-1 k+1:end],:) ;  %% Get the remaining indices
+                idxTr = idxTr(:);
+                Te.y = labels(idxTe);
+                Te.X = XSVD(idxTe,:);
+                Tr.y = labels(idxTr);
+                Tr.X = XSVD(idxTr,:);
+
+
+
+model = svmtrain(Tr.y, Tr.X , '-t 2 -g 0.02 -c 1 ');
+[predicted_label, accuracy, decision_values] = svmpredict(Te.y, Te.X, model );
+
+
+elseif(i==2)
+%% Train an SVM Model: RBF KERNEL with DATA TRANFORMED with PCA
+
+   idxTe = idxCV(k,:); %% Get the kth line of indices
+                idxTr = idxCV([1:k-1 k+1:end],:) ;  %% Get the remaining indices
+                idxTr = idxTr(:);
+                Te.y = labels(idxTe);
+                Te.X = XPCA(idxTe,:);
+                Tr.y = labels(idxTr);
+                Tr.X = XPCA(idxTr,:);
+
+fprintf('Training SVM Model.. RBF Kernel PCA Data\n');
+model = svmtrain(Tr.y, Tr.X , '-t 2 -g 0.02 -c 1');
+[predicted_label, accuracy, decision_values] = svmpredict(Te.y, Te.X, model );
+elseif(i==3)
+%% Train an SVM Model: RBF KERNEL with  SubSampling The Data
+
+fprintf('Training SVM Model.. RBF Kernel SubSampled  Data\n');
+         idxTe = idxCV(k,:); %% Get the kth line of indices
+                idxTr = idxCV([1:k-1 k+1:end],:) ;  %% Get the remaining indices
+                idxTr = idxTr(:);
+                Te.y = labels(idxTe);
+                Te.X = X(idxTe,:);
+                Tr.y = labels(idxTr);
+                Tr.X = X(idxTr,:);
+
+
+Tr.X = Tr.X(:,1:2:D) ; 
+Te.X = Te.X(:,1:2:D) ; 
+
+model = svmtrain(Tr.y, Tr.X , '-t 2 -g 0.02 -c 1');
+[predicted_label, accuracy, decision_values] = svmpredict(Te.y, Te.X, model );
+
+
+
+elseif(i==4)
+%% Train an SVM Model: RBF KERNEL with   The Hole Data
+
+fprintf('Training SVM Model.. RBF Kernel ALL Data\n');
+                idxTe = idxCV(k,:); %% Get the kth line of indices
+                idxTr = idxCV([1:k-1 k+1:end],:) ;  %% Get the remaining indices
+                idxTr = idxTr(:);
+                Te.y = labels(idxTe);
+                Te.X = X(idxTe,:);
+                Tr.y = labels(idxTr);
+                Tr.X = X(idxTr,:);
+
+
+
+
+model = svmtrain(Tr.y, Tr.X , '-t 2 -g 0.02 -c 1');
+[predicted_label, accuracy, decision_values] = svmpredict(Te.y, Te.X, model );
+
+
+end
+
+end
+

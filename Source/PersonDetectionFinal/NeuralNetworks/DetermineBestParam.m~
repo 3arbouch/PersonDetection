@@ -1,0 +1,38 @@
+addpath(genpath('../toolbox/'));
+
+% Load both features and training images
+load train_feats;
+load train_imgs;
+
+% %% --browse through the images, and show the feature visualization beside
+% %  -- You should explore the features for the positive and negative
+% %  examples and understand how they resemble the original image.
+% for i=1:2
+%     clf();
+%     
+%     subplot(121);
+%     imshow(imgs{i}); % image itself
+%     
+%     subplot(122);
+%     im( hogDraw(feats{i}) ); colormap gray;
+%     axis off; colorbar off;
+%     
+%     pause;  % wait for keydo that then,??
+% end
+
+%% -- Generate feature vectors (so each one is a row of X)
+fprintf('Generating feature vectors..\n');
+D = numel(feats{1});  % feature dimensionality
+X = zeros([length(imgs) D]);
+
+for i=1:length(imgs)
+    X(i,:) = feats{i}(:);  % convert to a vector of D dimensions
+end
+
+layers = [2] ; 
+numberOfActivations = 5:5 ; 
+activationFunctions = {'sigm'} ; 
+K = 5 ; 
+
+
+[scores, scoreBest, LayerBest, DimhiddenBest, ActivationFunctionBest ] = findBestParametersForNN( X, labels, layers,numberOfActivations,activationFunctions,K )  

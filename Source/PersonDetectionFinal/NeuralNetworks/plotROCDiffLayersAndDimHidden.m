@@ -1,0 +1,124 @@
+function [ output_args ] = plotROCDiffLayersAndDimHidden( data, labels, layers,dimHidden,activationFunctions,K )
+% This function plots ROC curves for different fixed Layers and dimension
+% Hidden Variables the K fold ROC curves for each model and its mean 
+
+% This function helps have a prior informations about which of the
+% activation function is better 
+
+
+
+% Generate the K rows of random indices 
+
+N = size(labels,1);
+idx = randperm(N);
+Nk = floor(N/K);
+for k = 1:K
+	idxCV(k,:) = idx(1+(k-1)*Nk:k*Nk) ; 
+end
+
+
+styles = {'r','b','g','b','c'};
+
+for layer=layers
+    for dim=dimHidden
+        % Construct the layer Hidden Variables vector
+        vectorHiddenVariables = dim*ones(1,layer) ;
+       
+        figure ; 
+        for j=1:length(activationFunctions)
+             for k=1:K
+                % get k'th subgroup in test, others in train
+                idxTe = idxCV(k,:); %% Get the kth line of indices
+                idxTr = idxCV([1:k-1 k+1:end],:) ;  %% Get the remaining indices
+                idxTr = idxTr(:);
+                Te.y = labels(idxTe);
+                Te.X = data(idxTe,:);
+                Tr.y = labels(idxTr);
+                Tr.X = data(idxTr,:);
+		
+                 
+                
+                rng(8339);  % fix seed, this    NN is very sensitive to initialization
+
+                % setup NN. The first layer needs to have number of features neurons,
+                %  and the last layer the number of classes (here two).
+                nn = nnsetup([size(Tr.X,2) vectorHiddenVariables 2]);
+                    
+                if(strcmp(activationFunctions{j},'sigm'))
+                    nn.activation_function = 'sigm';    %  Sigmoid activation function
+                    nn.learningRate = 1;                %  Sigm require a lower learning rate
+                    
+                    
+                elseif (strcmp(activationFunctions{j},'tanh_opt'))
+                        
+                    nn.activation_function = 'tanh_opt';    
+                    nn.learningRate = 2;                
+                        
+                end
+                
+                
+
+                opts.numepochs =  50;   %  Number of full sweeps through data
+                opts.batchsize = 100;  %  Take a mean gradient step over this many samples
+
+                % if == 1 => plots trainin error as the NN is trained
+                opts.plot               = 0; 
+
+                
+
+                % this neural network implementation requires number of samples to be a
+                % multiple of batchsize, so we remove some for this to be true.
+                numSampToUse = opts.batchsize * floor( size(Tr.X) / opts.batchsize);
+                Tr.X = Tr.X(1:numSampToUse,:);
+                Tr.y = Tr.y(1:numSampToUse);
+
+                % normalize data
+                [Tr.normX, mu, sigma] = zscore(Tr.X); % train, get mu and std
+
+                % prepare labels for NN
+                LL = [1*(Tr.y>0)  1*(Tr.y<0)];  % first column, p(y=1)
+                                                   % second column, p(y=-1)
+
+                [nn, L] = nntrain(nn, Tr.normX, LL, opts);
+
+
+                Te.normX = normalize(Te.X, mu, sigma);  % normalize test data
+
+                % to get the scores we need to do nnff (feed-forward)
+                %  see for example nnpredict().
+                % (This is a weird thing of this toolbox)
+                nn.testing = 1;
+                nn = nnff(nn, Te.normX, zeros(size(Te.normX,1), nn.size(end)));
+                nn.testing = 0;
+
+                % predict on the test set
+                nnPred = nn.a{end};
+
+                % we want a single score, subtract the output sigmoids
+                nnPred = nnPred(:,1) - nnPred(:,2);
+
+                      
+                % now you can see that the performance of each method
+                % is in avgTPRList. You can see that random is doing very bad.
+                [tprAtWP(k,j),auc(:,k),fpr(:,:,k),tpr(:,:,k)] = evaluateMultipleMethodsKFolds( Te.y > 0, nnPred, true,'',0,j );
+                hold on ;                 
+                 
+                 
+             end
+            fprAvr = mean (fpr,3) ; 
+            tprAvr = mean (tpr,3)  ; 
+           
+           x(j) = semilogx(fprAvr,tprAvr,styles{j},'LineWidth',2);
+           legendNames{j} = sprintf('%s  %.3f', activationFunctions{j}, mean(tprAtWP(:,j)));
+           
+           hold on ; 
+        end
+        legend(x,  legendNames, 'Location', 'NorthWest' );
+        t = sprintf('%s:  %d  %s: %d' , 'Layer', layer, 'Dimension',dim);
+        title(t) ; 
+    end
+    
+end
+
+end
+
